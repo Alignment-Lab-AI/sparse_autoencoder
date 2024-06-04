@@ -1,9 +1,6 @@
-# Sparse autoencoder for GPT2 small
+# Sparse autoencoders
 
-This repository hosts a sparse autoencoder trained on the GPT2-small model's activations.
-The autoencoder's purpose is to expand the MLP layer activations into a larger number of dimensions,
-providing an overcomplete basis of the MLP activation space. The learned dimensions have been
-shown to be more interpretable than the original MLP dimensions.
+This repository hosts sparse autoencoders trained on the GPT2-small model's activations.
 
 ### Install
 
