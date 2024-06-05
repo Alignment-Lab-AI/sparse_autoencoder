@@ -23,7 +23,8 @@ import sparse_autoencoder
 
 # Load the autoencoder
 layer_index = 0
-location = "resid_delta_mlp"
+location = "resid_post_mlp"
+layernorm = True
 with bf.BlobFile(sparse_autoencoder.paths.v5_32k(location, layer_index), mode="rb") as f:
     state_dict = torch.load(f)
     autoencoder = sparse_autoencoder.Autoencoder.from_state_dict(state_dict)
@@ -48,16 +49,20 @@ input_tensor = activation_cache[transformer_lens_loc_map[location]]
 device = next(model.parameters()).device
 autoencoder.to(device)
 
-# apply layer norm first
-mu = input_tensor.mean(dim=1, keepdim=True)
-input_tensor = input_tensor - mu
-std = input_tensor.std(dim=1, keepdim=True)
-input_tensor = input_tensor / std
+input_tensor_ln = input_tensor
+if layernorm:
+    # apply layer norm first
+    mu = input_tensor_ln.mean(dim=1, keepdim=True)
+    input_tensor_ln = input_tensor_ln - mu
+    std = input_tensor_ln.std(dim=1, keepdim=True)
+    input_tensor_ln = input_tensor_ln / std
+
 with torch.no_grad():
-    latent_activations = autoencoder.encode(input_tensor)  # (n_tokens, n_latents)
+    latent_activations = autoencoder.encode(input_tensor_ln)  # (n_tokens, n_latents)
     reconstructed_activations = autoencoder.decode(latent_activations)
 
-reconstructed_activations = reconstructed_activations * std + mu
+if layernorm:
+    reconstructed_activations = reconstructed_activations * std + mu
 
 normalized_mse = (reconstructed_activations - input_tensor).pow(2).sum(dim=1) / (input_tensor).pow(2).sum(dim=1)
 ```
