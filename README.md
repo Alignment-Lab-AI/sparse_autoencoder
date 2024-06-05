@@ -8,6 +8,11 @@ This repository hosts sparse autoencoders trained on the GPT2-small model's acti
 pip install git+https://github.com/openai/sparse_autoencoder.git
 ```
 
+### Code structure
+
+See [model.py](./sparse_autoencoder/model.py) for details on the autoencoder model architecture.
+See [paths.py](./sparse_autoencoder/paths.py) for more details on the available autoencoders.
+
 ### Example usage
 
 ```py
@@ -17,10 +22,9 @@ import transformer_lens
 import sparse_autoencoder
 
 # Load the autoencoder
-layer_index = 0  # in range(12)
-autoencoder_input = ["mlp_post_act", "resid_delta_mlp"][0]
-filename = f"az://openaipublic/sparse-autoencoder/gpt2-small/{autoencoder_input}/autoencoders/{layer_index}.pt"
-with bf.BlobFile(filename, mode="rb") as f:
+layer_index = 0
+location = "resid_delta_mlp"
+with bf.BlobFile(sparse_autoencoder.paths.v5_32k(location, layer_index), mode="rb") as f:
     state_dict = torch.load(f)
     autoencoder = sparse_autoencoder.Autoencoder.from_state_dict(state_dict)
 
@@ -28,39 +32,32 @@ with bf.BlobFile(filename, mode="rb") as f:
 model = transformer_lens.HookedTransformer.from_pretrained("gpt2", center_writing_weights=False)
 prompt = "This is an example of a prompt that"
 tokens = model.to_tokens(prompt)  # (1, n_tokens)
-print(model.to_str_tokens(tokens))
 with torch.no_grad():
     logits, activation_cache = model.run_with_cache(tokens, remove_batch_dim=True)
-if autoencoder_input == "mlp_post_act":
-    input_tensor = activation_cache[f"blocks.{layer_index}.mlp.hook_post"]  # (n_tokens, n_neurons)
-elif autoencoder_input == "resid_delta_mlp":
-    input_tensor = activation_cache[f"blocks.{layer_index}.hook_mlp_out"]  # (n_tokens, n_residual_channels)
+
+transformer_lens_loc_map = {
+    "mlp_post_act": f"blocks.{layer_index}.mlp.hook_post",
+    "resid_delta_attn": f"blocks.{layer_index}.hook_attn_out",
+    "resid_post_attn": f"blocks.{layer_index}.hook_resid_mid",
+    "resid_delta_mlp": f"blocks.{layer_index}.hook_mlp_out",
+    "resid_post_mlp": f"blocks.{layer_index}.hook_resid_post",
+}
+input_tensor = activation_cache[transformer_lens_loc_map[location]]
 
 # Encode neuron activations with the autoencoder
 device = next(model.parameters()).device
 autoencoder.to(device)
+
+# apply layer norm first
+mu = input_tensor.mean(dim=1, keepdim=True)
+input_tensor = input_tensor - mu
+std = input_tensor.std(dim=1, keepdim=True)
+input_tensor = input_tensor / std
 with torch.no_grad():
     latent_activations = autoencoder.encode(input_tensor)  # (n_tokens, n_latents)
+    reconstructed_activations = autoencoder.decode(latent_activations)
+
+reconstructed_activations = reconstructed_activations * std + mu
+
+normalized_mse = (reconstructed_activations - input_tensor).pow(2).sum(dim=1) / (input_tensor).pow(2).sum(dim=1)
 ```
-
-### Autoencoder settings
-
-- Model used: "gpt2-small", 12 layers
-- Autoencoder architecture: see `model.py`
-- Autoencoder input: "mlp_post_act" (3072 dimensions) or "resid_delta_mlp" (768 dimensions)
-- Number of autoencoder latents: 32768
-- Loss function: see `loss.py`
-- Number of training tokens: ~64M
-- L1 regularization strength: 0.01
-
-### Data files
-
-- `autoencoder_input` is in ["mlp_post_act", "resid_delta_mlp"]
-- `layer_index` is in range(12) (GPT2-small)
-- `latent_index` is in range(32768)
-
-Autoencoder files:
-`az://openaipublic/sparse-autoencoder/gpt2-small/{autoencoder_input}/autoencoders/{layer_index}.pt`
-
-NeuronRecord files:
-`az://openaipublic/sparse-autoencoder/gpt2-small/{autoencoder_input}/collated_activations/{layer_index}/{latent_index}.json`
