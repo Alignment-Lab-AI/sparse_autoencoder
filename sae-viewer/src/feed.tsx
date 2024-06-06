@@ -12,7 +12,6 @@ export default function Feed() {
   const params = useParams();
   const navigate = useNavigate();
   let family = AUTOENCODER_FAMILIES[params.family || DEFAULT_AUTOENCODER.family];
-  // Grab the layer and neuron indices from the params, casting them to ints.
   let feature: Feature = {
     // "layer": parseInt(params.layer),
     "atom": parseInt(params.atom),

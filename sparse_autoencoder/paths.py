@@ -50,3 +50,6 @@ def v5_128k(location, layer_index):
     assert layer_index in range(12)
     # note: it's actually 2**15 and 2**17 ~= 131k
     return f"az://openaipublic/sparse-autoencoder/gpt2-small/{location}_v5_128k/autoencoders/{layer_index}.pt"
+
+# NOTE: we have larger autoencoders (up to 8M, with varying n and k) trained on layer 8 resid_post_mlp
+# we may release them in the future

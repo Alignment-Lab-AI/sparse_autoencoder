@@ -1,6 +1,8 @@
 # Sparse autoencoders
 
-This repository hosts sparse autoencoders trained on the GPT2-small model's activations.
+This repository hosts:
+- sparse autoencoders trained on the GPT2-small model's activations.
+- a visualizer for the autoencoders' features
 
 ### Install
 
@@ -10,8 +12,12 @@ pip install git+https://github.com/openai/sparse_autoencoder.git
 
 ### Code structure
 
+See [sae-viewer](./sae-viewer/README.md) to see the visualizer code, hosted publicly [here](https://openaipublic.blob.core.windows.net/sparse-autoencoder/sae-viewer/index.html).
+
 See [model.py](./sparse_autoencoder/model.py) for details on the autoencoder model architecture.
 See [paths.py](./sparse_autoencoder/paths.py) for more details on the available autoencoders.
+
+NOTE: we also hope to release training code soon.  stay tuned!
 
 ### Example usage
 
@@ -56,5 +62,4 @@ with torch.no_grad():
 
 normalized_mse = (reconstructed_activations - input_tensor).pow(2).sum(dim=1) / (input_tensor).pow(2).sum(dim=1)
 print(location, normalized_mse)
-
 ```

@@ -65,14 +65,14 @@ export const normalizeSequences = (...sequences: SequenceInfo[][]) => {
   // console.log('sequences', sequences)
   let flattened: SequenceInfo[] = flatten(sequences)
   const maxActivation = Math.max(0, ...flattened.map((s) => Math.max(...s.acts)));
-  const neuronScale = scaleLinear()
+  const scaler = scaleLinear()
     // Even though we're only displaying positive activations, we still need to scale in a way that
     // accounts for the existence of negative activations, since our color scale includes them.
     .domain([0, maxActivation])
     .range([0, 1])
 
   sequences.map((seqs) => seqs.map((s) => {
-    s.normalized_acts = s.acts.map((activation) => neuronScale(activation));
+    s.normalized_acts = s.acts.map((activation) => scaler(activation));
   }))
 }
 
@@ -88,7 +88,7 @@ export const normalizeTokenActs = (...sequences: TokenSequence[][]) => {
     }
   })
   const maxActivation = max(flattened.map((ta) => ta.activation)) || 0;
-  const neuronScale = scaleLinear()
+  const scaler = scaleLinear()
     // Even though we're only displaying positive activations, we still need to scale in a way that
     // accounts for the existence of negative activations, since our color scale includes them.
     .domain([0, maxActivation])
@@ -97,7 +97,7 @@ export const normalizeTokenActs = (...sequences: TokenSequence[][]) => {
   return sequences.map((seq) => seq.map((tas) => tas.map(({ token, activation }) => ({
       token,
       activation,
-      normalized_activation: neuronScale(activation),
+      normalized_activation: scaler(activation),
   }))))
 }
 

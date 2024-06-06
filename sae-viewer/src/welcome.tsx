@@ -5,7 +5,7 @@ import { Feature } from "./types"
 import FeatureSelect from "./components/featureSelect"
 import { pathForFeature, DEFAULT_AUTOENCODER, AUTOENCODER_FAMILIES } from "./autoencoder_registry"
 
-function NeuronForm() {
+export default function Welcome() {
   const navigate = useNavigate()
 
   const GPT4_ATOMS_PER_SHARD = 1024;
@@ -135,5 +135,3 @@ function NeuronForm() {
     </div>
   )
 }
-
-export default NeuronForm
